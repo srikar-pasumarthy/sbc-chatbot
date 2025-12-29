@@ -1,0 +1,35 @@
+.suggestion-btn {
+    background-color: white;
+    border: 1px solid #6B2D7B;
+    color: #6B2D7B;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-btn:hover {
+    background-color: #6B2D7B;
+    color: white;
+}
+
+#chat-toggle-btn:hover {
+    transform: scale(1.1);
+}
+
+#chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
