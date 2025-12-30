@@ -500,7 +500,7 @@ dash_app.layout = html.Div([
                 src=dash_app.get_asset_url("chat-icon.svg"),
                 style={'width': '28px', 'height': '28px', 'filter': 'brightness(0) invert(1)'}
             )
-        ], id='chat-icon-container'),
+        ], id='chat-icon-container', className="chat-icon"),
         id='chat-toggle-btn',
         style=CHAT_BUTTON_STYLE,
         n_clicks=0
@@ -590,8 +590,11 @@ dash_app.layout = html.Div([
 
 # Callback to toggle chat window
 @callback(
-    [Output('chat-window', 'className'),
-     Output('chat-open', 'data')],
+    [
+        Output('chat-window', 'className'),
+        Output('chat-open', 'data'),
+        Output('chat-icon-container', 'className'),
+    ],
     [Input('chat-toggle-btn', 'n_clicks'),
      Input('chat-close-btn', 'n_clicks')],
     [State('chat-open', 'data')],
@@ -603,16 +606,19 @@ def toggle_chat(toggle_clicks, close_clicks, is_open):
     is_open = bool(is_open)
     closed_class = "chat-window"
     open_class = "chat-window open"
+    icon_base = "chat-icon"
+    icon_open = "chat-icon is-open spin-open"
+    icon_closed = "chat-icon spin-close"
     
     if triggered_id == 'chat-close-btn':
-        return closed_class, False
+        return closed_class, False, icon_closed
     elif triggered_id == 'chat-toggle-btn':
         if is_open:
-            return closed_class, False
+            return closed_class, False, icon_closed
         else:
-            return open_class, True
+            return open_class, True, icon_open
     
-    return closed_class, False
+    return closed_class, False, icon_closed
 
 
 @callback(

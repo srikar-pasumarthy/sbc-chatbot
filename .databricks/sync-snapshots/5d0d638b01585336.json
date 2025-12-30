@@ -4,12 +4,12 @@
   "remote_path": "/Workspace/Users/srikar.pasumarthy@databricks.com/databricks_apps/sbc-chatbot_2025_12_29-21_05/dash-hello-world-app",
   "last_modified_times": {
     ".gitignore": "2025-12-29T15:13:12.526226443-08:00",
-    "app.py": "2025-12-29T22:12:33.657241116-08:00",
+    "app.py": "2025-12-29T22:14:53.646334981-08:00",
     "app.yaml": "2025-12-29T13:20:24.119493883-08:00",
     "assets/bot_icon.png": "2025-12-29T21:50:49.816195676-08:00",
     "assets/chat-icon.svg": "2025-12-29T14:57:47.149305778-08:00",
     "assets/landing_page.png": "2025-12-29T14:57:32.812446189-08:00",
-    "assets/styles.css": "2025-12-29T22:12:33.657240866-08:00",
+    "assets/styles.css": "2025-12-29T22:14:53.646195897-08:00",
     "requirements.txt": "2025-12-29T17:37:17.156556661-08:00"
   },
   "local_to_remote_names": {

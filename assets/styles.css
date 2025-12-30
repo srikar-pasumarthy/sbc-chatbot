@@ -18,6 +18,31 @@
     transform: scale(1.1);
 }
 
+/* Spin the chat icon on toggle (open/close) */
+#chat-icon-container.chat-icon img {
+    display: block;
+    transform-origin: 50% 50%;
+    will-change: transform;
+}
+
+#chat-icon-container.chat-icon.spin-open img {
+    animation: chatIconSpinOpen 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#chat-icon-container.chat-icon.spin-close img {
+    animation: chatIconSpinClose 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes chatIconSpinOpen {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes chatIconSpinClose {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+}
+
 /* Chat window open/close transition */
 #chat-window.chat-window {
     opacity: 0;
@@ -44,6 +69,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    #chat-icon-container.chat-icon.spin-open img,
+    #chat-icon-container.chat-icon.spin-close img {
+        animation: none;
+    }
+
     #chat-window.chat-window,
     #chat-window.chat-window.open {
         transition: none;
