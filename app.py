@@ -79,12 +79,6 @@ DATABRICKS_OPENAI_RESPONSES_URL = os.getenv(
     "DATABRICKS_OPENAI_RESPONSES_URL",
     f"{DATABRICKS_OPENAI_BASE_URL.rstrip('/')}/responses",
 )
-DATABRICKS_DEFAULT_SUGGESTIONS = [
-    "What's my deductible?",
-    "Find a doctor",
-    "Coverage for prescriptions",
-]
-
 # Initialize the Dash app
 dash_app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -539,27 +533,6 @@ dash_app.layout = html.Div([
             ], style={'display': 'flex', 'justifyContent': 'flex-start'}),
         ], id='chat-messages', style=MESSAGE_CONTAINER_STYLE),
         
-        # Suggested questions
-        html.Div([
-            html.Div("Quick questions:", style={
-                'fontSize': '12px',
-                'color': '#666',
-                'marginBottom': '8px'
-            }),
-            html.Div([
-                html.Button(text, className='suggestion-btn', id=f'suggest-{i}', n_clicks=0)
-                for i, text in enumerate(DATABRICKS_DEFAULT_SUGGESTIONS, start=1)
-            ], style={
-                'display': 'flex',
-                'flexWrap': 'wrap',
-                'gap': '6px'
-            })
-        ], id='suggestions-container', style={
-            'padding': '12px 16px',
-            'borderTop': '1px solid #e9ecef',
-            'backgroundColor': '#fafafa'
-        }),
-        
         # Input area
         html.Div([
             dbc.InputGroup([
@@ -634,9 +607,6 @@ def toggle_chat(toggle_clicks, close_clicks, is_open):
     ],
     [
         Input('send-btn', 'n_clicks'),
-        Input('suggest-1', 'n_clicks'),
-        Input('suggest-2', 'n_clicks'),
-        Input('suggest-3', 'n_clicks'),
     ],
     [
         State('chat-input', 'value'),
@@ -645,7 +615,7 @@ def toggle_chat(toggle_clicks, close_clicks, is_open):
     ],
     prevent_initial_call=True,
 )
-def handle_chat(send_clicks, suggest1, suggest2, suggest3, user_input, history, pending_request):
+def handle_chat(send_clicks, user_input, history, pending_request):
     from dash import ctx
     history = history or []
 
@@ -653,14 +623,7 @@ def handle_chat(send_clicks, suggest1, suggest2, suggest3, user_input, history, 
     if pending_request:
         raise dash.exceptions.PreventUpdate
 
-    trigger_id = ctx.triggered_id
-    suggestion_map = {
-        'suggest-1': DATABRICKS_DEFAULT_SUGGESTIONS[0],
-        'suggest-2': DATABRICKS_DEFAULT_SUGGESTIONS[1],
-        'suggest-3': DATABRICKS_DEFAULT_SUGGESTIONS[2],
-    }
-
-    message = suggestion_map.get(trigger_id, user_input or "").strip()
+    message = (user_input or "").strip()
     if not message:
         raise dash.exceptions.PreventUpdate
 
