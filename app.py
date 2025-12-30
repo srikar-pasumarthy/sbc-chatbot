@@ -540,7 +540,17 @@ dash_app.layout = html.Div([
                     'alignItems': 'center',
                     'justifyContent': 'center'
                 }, children=[
-                    html.Span('💬', style={'fontSize': '20px'})
+                    html.Img(
+                        src=dash_app.get_asset_url("bot_icon.png"),
+                        alt="Bot",
+                        style={
+                            "width": "24px",
+                            "height": "24px",
+                            "borderRadius": "50%",
+                            "objectFit": "cover",
+                            "display": "block",
+                        },
+                    )
                 ]),
                 html.Div([
                     html.Div('Select Health Assistant', style={
