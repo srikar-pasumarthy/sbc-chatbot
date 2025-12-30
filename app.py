@@ -1,6 +1,7 @@
 import json
 import os
 from functools import lru_cache
+from uuid import uuid4
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -405,7 +406,41 @@ def render_history(history: list[dict]) -> list:
     if not history:
         return []
 
-    return [render_message_bubble(msg["text"], msg["role"]) for msg in history]
+    rendered = []
+    for msg in history:
+        text = msg.get("text", "")
+        if msg.get("pending"):
+            text = "Thinking..."
+        rendered.append(render_message_bubble(text, msg.get("role", "assistant")))
+    return rendered
+
+
+def _welcome_message_view() -> html.Div:
+    return html.Div([
+        html.Div([
+            html.P("👋 Hi there! I'm your Select Health virtual assistant.", style={'margin': '0 0 8px 0'}),
+            html.P("I can help you with:", style={'margin': '0 0 8px 0', 'fontWeight': '500'}),
+            html.Ul([
+                html.Li("Understanding your benefits"),
+                html.Li("Finding in-network providers"),
+                html.Li("Explaining coverage details"),
+                html.Li("Open enrollment questions"),
+            ], style={'margin': '0', 'paddingLeft': '20px', 'fontSize': '13px'})
+        ], style={
+            'backgroundColor': 'white',
+            'padding': '14px 16px',
+            'borderRadius': '12px',
+            'borderBottomLeftRadius': '4px',
+            'boxShadow': '0 1px 2px rgba(0,0,0,0.1)',
+            'maxWidth': '85%',
+            'fontSize': '14px',
+            'lineHeight': '1.5'
+        })
+    ], style={'display': 'flex', 'justifyContent': 'flex-start'})
+
+
+def _messages_view(history: list[dict]) -> list:
+    return [_welcome_message_view()] + render_history(history or [])
 
 
 # Define the app layout
@@ -561,7 +596,8 @@ dash_app.layout = html.Div([
     
     # Store for chat state
     dcc.Store(id='chat-open', data=False),
-    dcc.Store(id='chat-history', data=[])
+    dcc.Store(id='chat-history', data=[]),
+    dcc.Store(id='pending-request', data=None),
 ], style={'margin': '0', 'padding': '0'})
 
 
@@ -594,6 +630,7 @@ def toggle_chat(toggle_clicks, close_clicks, is_open):
         Output('chat-messages', 'children'),
         Output('chat-history', 'data'),
         Output('chat-input', 'value'),
+        Output('pending-request', 'data'),
     ],
     [
         Input('send-btn', 'n_clicks'),
@@ -604,12 +641,17 @@ def toggle_chat(toggle_clicks, close_clicks, is_open):
     [
         State('chat-input', 'value'),
         State('chat-history', 'data'),
+        State('pending-request', 'data'),
     ],
     prevent_initial_call=True,
 )
-def handle_chat(send_clicks, suggest1, suggest2, suggest3, user_input, history):
+def handle_chat(send_clicks, suggest1, suggest2, suggest3, user_input, history, pending_request):
     from dash import ctx
     history = history or []
+
+    # If a request is in-flight, don't queue another one (keeps ordering simple).
+    if pending_request:
+        raise dash.exceptions.PreventUpdate
 
     trigger_id = ctx.triggered_id
     suggestion_map = {
@@ -622,40 +664,50 @@ def handle_chat(send_clicks, suggest1, suggest2, suggest3, user_input, history):
     if not message:
         raise dash.exceptions.PreventUpdate
 
-    updated_history = history + [{"role": "user", "text": message}]
+    request_id = str(uuid4())
+    updated_history = history + [
+        {"id": request_id, "role": "user", "text": message, "pending": False},
+        {"id": request_id, "role": "assistant", "text": "", "pending": True},
+    ]
+
     request_messages = [
         {"role": msg["role"], "content": msg["text"]}
         for msg in updated_history
-        if msg.get("text")
+        if msg.get("role") in {"user", "assistant"} and msg.get("text") and not msg.get("pending")
     ]
+
+    pending = {"id": request_id, "messages": request_messages}
+    return _messages_view(updated_history), updated_history, "", pending
+
+
+@callback(
+    [
+        Output('chat-messages', 'children', allow_duplicate=True),
+        Output('chat-history', 'data', allow_duplicate=True),
+        Output('pending-request', 'data', allow_duplicate=True),
+    ],
+    [Input('pending-request', 'data')],
+    [State('chat-history', 'data')],
+    prevent_initial_call=True,
+)
+def fetch_agent_reply(pending_request, history):
+    if not pending_request:
+        raise dash.exceptions.PreventUpdate
+
+    history = history or []
+    request_id = pending_request.get("id")
+    request_messages = pending_request.get("messages") or []
+
     reply = call_databricks_agent(request_messages)
-    updated_history.append({"role": "assistant", "text": reply})
 
-    messages_view = [
-        html.Div([
-            html.Div([
-                html.P("👋 Hi there! I'm your Select Health virtual assistant.", style={'margin': '0 0 8px 0'}),
-                html.P("I can help you with:", style={'margin': '0 0 8px 0', 'fontWeight': '500'}),
-                html.Ul([
-                    html.Li("Understanding your benefits"),
-                    html.Li("Finding in-network providers"),
-                    html.Li("Explaining coverage details"),
-                    html.Li("Open enrollment questions"),
-                ], style={'margin': '0', 'paddingLeft': '20px', 'fontSize': '13px'})
-            ], style={
-                'backgroundColor': 'white',
-                'padding': '14px 16px',
-                'borderRadius': '12px',
-                'borderBottomLeftRadius': '4px',
-                'boxShadow': '0 1px 2px rgba(0,0,0,0.1)',
-                'maxWidth': '85%',
-                'fontSize': '14px',
-                'lineHeight': '1.5'
-            })
-        ], style={'display': 'flex', 'justifyContent': 'flex-start'})
-    ] + render_history(updated_history)
+    updated = []
+    for msg in history:
+        if msg.get("id") == request_id and msg.get("role") == "assistant" and msg.get("pending"):
+            updated.append({**msg, "text": reply, "pending": False})
+        else:
+            updated.append(msg)
 
-    return messages_view, updated_history, ""
+    return _messages_view(updated), updated, None
 
 
 if __name__ == '__main__':
