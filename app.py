@@ -368,7 +368,7 @@ def call_databricks_agent(messages: list[dict]) -> str:
         return "Sorry, something went wrong while processing your request."
 
 
-def render_message_bubble(text: str, role: str) -> html.Div:
+def render_message_bubble(text: str, role: str, *, pending: bool = False) -> html.Div:
     is_user = role == "user"
     bubble_style = {
         "backgroundColor": "#6B2D7B" if is_user else "white",
@@ -407,6 +407,21 @@ def render_message_bubble(text: str, role: str) -> html.Div:
     if is_user:
         return html.Div([html.Div(text, style=bubble_style)], style=row_style)
 
+    # Pending assistant response: show a typing indicator so users know a response is coming.
+    if pending:
+        typing = html.Div(
+            [
+                html.Span(className="typing-dot", **{"aria-hidden": "true"}),
+                html.Span(className="typing-dot", **{"aria-hidden": "true"}),
+                html.Span(className="typing-dot", **{"aria-hidden": "true"}),
+                html.Span("Assistant is typing…", className="sr-only"),
+            ],
+            className="typing-indicator",
+            role="status",
+            **{"aria-live": "polite", "aria-label": "Assistant is typing"},
+        )
+        return html.Div([assistant_avatar, html.Div(typing, style=bubble_style)], style=row_style)
+
     return html.Div([assistant_avatar, html.Div(text, style=bubble_style)], style=row_style)
 
 
@@ -420,9 +435,14 @@ def render_history(history: list[dict]) -> list:
     rendered = []
     for msg in history:
         text = msg.get("text", "")
-        if msg.get("pending"):
-            text = "Thinking..."
-        rendered.append(render_message_bubble(text, msg.get("role", "assistant")))
+        pending = bool(msg.get("pending"))
+        rendered.append(
+            render_message_bubble(
+                text,
+                msg.get("role", "assistant"),
+                pending=pending,
+            )
+        )
     return rendered
 
 
