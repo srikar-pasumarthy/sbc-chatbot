@@ -384,13 +384,30 @@ def render_message_bubble(text: str, role: str) -> html.Div:
         "whiteSpace": "pre-wrap",
     }
 
-    return html.Div(
-        html.Div(text, style=bubble_style),
-        style={
-            "display": "flex",
-            "justifyContent": "flex-end" if is_user else "flex-start",
-        },
-    )
+    avatar_size = 28
+    avatar_style = {
+        "width": f"{avatar_size}px",
+        "height": f"{avatar_size}px",
+        "borderRadius": "50%",
+        "flex": "0 0 auto",
+        "objectFit": "cover",
+    }
+
+    # Assistant uses provided bot icon.
+    assistant_avatar = html.Img(src=dash_app.get_asset_url("bot_icon.png"), style=avatar_style)
+
+    # Layout: assistant avatar on left; user has no avatar.
+    row_style = {
+        "display": "flex",
+        "alignItems": "flex-end",
+        "gap": "8px",
+        "justifyContent": "flex-end" if is_user else "flex-start",
+    }
+
+    if is_user:
+        return html.Div([html.Div(text, style=bubble_style)], style=row_style)
+
+    return html.Div([assistant_avatar, html.Div(text, style=bubble_style)], style=row_style)
 
 
 def render_history(history: list[dict]) -> list:
@@ -410,27 +427,47 @@ def render_history(history: list[dict]) -> list:
 
 
 def _welcome_message_view() -> html.Div:
-    return html.Div([
-        html.Div([
-            html.P("👋 Hi there! I'm your Select Health virtual assistant.", style={'margin': '0 0 8px 0'}),
-            html.P("I can help you with:", style={'margin': '0 0 8px 0', 'fontWeight': '500'}),
-            html.Ul([
-                html.Li("Understanding your benefits"),
-                html.Li("Finding in-network providers"),
-                html.Li("Explaining coverage details"),
-                html.Li("Open enrollment questions"),
-            ], style={'margin': '0', 'paddingLeft': '20px', 'fontSize': '13px'})
-        ], style={
-            'backgroundColor': 'white',
-            'padding': '14px 16px',
-            'borderRadius': '12px',
-            'borderBottomLeftRadius': '4px',
-            'boxShadow': '0 1px 2px rgba(0,0,0,0.1)',
-            'maxWidth': '85%',
-            'fontSize': '14px',
-            'lineHeight': '1.5'
-        })
-    ], style={'display': 'flex', 'justifyContent': 'flex-start'})
+    avatar_size = 28
+    assistant_avatar = html.Img(
+        src=dash_app.get_asset_url("bot_icon.png"),
+        style={
+            "width": f"{avatar_size}px",
+            "height": f"{avatar_size}px",
+            "borderRadius": "50%",
+            "flex": "0 0 auto",
+            "objectFit": "cover",
+        },
+    )
+
+    welcome_card = html.Div([
+        html.P("👋 Hi there! I'm your Select Health virtual assistant.", style={'margin': '0 0 8px 0'}),
+        html.P("I can help you with:", style={'margin': '0 0 8px 0', 'fontWeight': '500'}),
+        html.Ul([
+            html.Li("Understanding your benefits"),
+            html.Li("Finding in-network providers"),
+            html.Li("Explaining coverage details"),
+            html.Li("Open enrollment questions"),
+        ], style={'margin': '0', 'paddingLeft': '20px', 'fontSize': '13px'})
+    ], style={
+        'backgroundColor': 'white',
+        'padding': '14px 16px',
+        'borderRadius': '12px',
+        'borderBottomLeftRadius': '4px',
+        'boxShadow': '0 1px 2px rgba(0,0,0,0.1)',
+        'maxWidth': '85%',
+        'fontSize': '14px',
+        'lineHeight': '1.5'
+    })
+
+    return html.Div(
+        [assistant_avatar, welcome_card],
+        style={
+            "display": "flex",
+            "alignItems": "flex-end",
+            "gap": "8px",
+            "justifyContent": "flex-start",
+        },
+    )
 
 
 def _messages_view(history: list[dict]) -> list:
@@ -447,7 +484,7 @@ dash_app.layout = html.Div([
             'left': '0',
             'width': '100vw',
             'height': '100vh',
-            'backgroundImage': 'url("/assets/landing_page.png")',
+            'backgroundImage': f'url("{dash_app.get_asset_url("landing_page.png")}")',
             'backgroundSize': 'cover',
             'backgroundPosition': 'top center',
             'backgroundRepeat': 'no-repeat',
@@ -460,7 +497,7 @@ dash_app.layout = html.Div([
         html.Div([
             # Chat icon SVG
             html.Img(
-                src='/assets/chat-icon.svg',
+                src=dash_app.get_asset_url("chat-icon.svg"),
                 style={'width': '28px', 'height': '28px', 'filter': 'brightness(0) invert(1)'}
             )
         ], id='chat-icon-container'),
@@ -508,30 +545,7 @@ dash_app.layout = html.Div([
         ], style=CHAT_HEADER_STYLE),
         
         # Messages container
-        html.Div([
-            # Welcome message
-            html.Div([
-                html.Div([
-                    html.P("👋 Hi there! I'm your Select Health virtual assistant.", style={'margin': '0 0 8px 0'}),
-                    html.P("I can help you with:", style={'margin': '0 0 8px 0', 'fontWeight': '500'}),
-                    html.Ul([
-                        html.Li("Understanding your benefits"),
-                        html.Li("Finding in-network providers"),
-                        html.Li("Explaining coverage details"),
-                        html.Li("Open enrollment questions"),
-                    ], style={'margin': '0', 'paddingLeft': '20px', 'fontSize': '13px'})
-                ], style={
-                    'backgroundColor': 'white',
-                    'padding': '14px 16px',
-                    'borderRadius': '12px',
-                    'borderBottomLeftRadius': '4px',
-                    'boxShadow': '0 1px 2px rgba(0,0,0,0.1)',
-                    'maxWidth': '85%',
-                    'fontSize': '14px',
-                    'lineHeight': '1.5'
-                })
-            ], style={'display': 'flex', 'justifyContent': 'flex-start'}),
-        ], id='chat-messages', style=MESSAGE_CONTAINER_STYLE),
+        html.Div(_messages_view([]), id='chat-messages', style=MESSAGE_CONTAINER_STYLE),
         
         # Input area
         html.Div([
