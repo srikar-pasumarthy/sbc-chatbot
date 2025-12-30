@@ -579,7 +579,7 @@ dash_app.layout = html.Div([
                 )
             ], style={'display': 'flex', 'alignItems': 'center'})
         ], style=INPUT_CONTAINER_STYLE)
-    ], id='chat-window', style={**CHAT_WINDOW_STYLE, 'display': 'none'}),
+    ], id='chat-window', style=CHAT_WINDOW_STYLE, className="chat-window"),
     
     # Store for chat state
     dcc.Store(id='chat-open', data=False),
@@ -590,7 +590,7 @@ dash_app.layout = html.Div([
 
 # Callback to toggle chat window
 @callback(
-    [Output('chat-window', 'style'),
+    [Output('chat-window', 'className'),
      Output('chat-open', 'data')],
     [Input('chat-toggle-btn', 'n_clicks'),
      Input('chat-close-btn', 'n_clicks')],
@@ -600,16 +600,19 @@ dash_app.layout = html.Div([
 def toggle_chat(toggle_clicks, close_clicks, is_open):
     from dash import ctx
     triggered_id = ctx.triggered_id
+    is_open = bool(is_open)
+    closed_class = "chat-window"
+    open_class = "chat-window open"
     
     if triggered_id == 'chat-close-btn':
-        return {**CHAT_WINDOW_STYLE, 'display': 'none'}, False
+        return closed_class, False
     elif triggered_id == 'chat-toggle-btn':
         if is_open:
-            return {**CHAT_WINDOW_STYLE, 'display': 'none'}, False
+            return closed_class, False
         else:
-            return {**CHAT_WINDOW_STYLE, 'display': 'flex'}, True
+            return open_class, True
     
-    return {**CHAT_WINDOW_STYLE, 'display': 'none'}, False
+    return closed_class, False
 
 
 @callback(
