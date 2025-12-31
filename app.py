@@ -408,7 +408,6 @@ def render_message_bubble(text: str, role: str, *, pending: bool = False) -> htm
         "maxWidth": "85%",
         "fontSize": "14px",
         "lineHeight": "1.5",
-        "whiteSpace": "pre-wrap",
     }
 
     avatar_size = 28
@@ -449,7 +448,13 @@ def render_message_bubble(text: str, role: str, *, pending: bool = False) -> htm
         )
         return html.Div([assistant_avatar, html.Div(typing, style=bubble_style)], style=row_style)
 
-    return html.Div([assistant_avatar, html.Div(text, style=bubble_style)], style=row_style)
+    # Use dcc.Markdown to properly render markdown formatting (bold, lists, etc.)
+    markdown_content = dcc.Markdown(
+        text,
+        style={"margin": "0"},
+        className="assistant-message-markdown",
+    )
+    return html.Div([assistant_avatar, html.Div(markdown_content, style=bubble_style)], style=row_style)
 
 
 def render_history(history: list[dict]) -> list:
