@@ -234,7 +234,6 @@ def call_databricks_agent(messages: list[dict]) -> str:
     Expected input shape:
       [{"role": "user"|"assistant"|"system", "content": "<text>"}]
     """
-    client = get_workspace_client()
     # Databricks OpenAI-compatible Responses API request (matches the sample code).
     body = {
         "model": DATABRICKS_ENDPOINT_NAME,
@@ -250,7 +249,7 @@ def call_databricks_agent(messages: list[dict]) -> str:
                 redacted[k] = v
         return redacted
 
-    def _best_effort_auth_headers() -> dict:
+    def _best_effort_auth_headers(client: WorkspaceClient) -> dict:
         """
         Attempt to retrieve auth headers from the databricks-sdk client without
         depending on private APIs too heavily.
@@ -271,11 +270,11 @@ def call_databricks_agent(messages: list[dict]) -> str:
                 continue
         return {}
 
-    def _invoke_http(url: str, body: dict) -> dict:
+    def _invoke_http(client: WorkspaceClient, url: str, body: dict) -> dict:
         """
         Invoke the endpoint via stdlib urllib so we can capture status/headers/text.
         """
-        auth_headers = _best_effort_auth_headers()
+        auth_headers = _best_effort_auth_headers(client)
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -319,7 +318,20 @@ def call_databricks_agent(messages: list[dict]) -> str:
             }
 
     try:
-        http_debug = _invoke_http(DATABRICKS_OPENAI_RESPONSES_URL, body)
+        client = get_workspace_client()
+        http_debug = _invoke_http(client, DATABRICKS_OPENAI_RESPONSES_URL, body)
+        status = http_debug.get("status")
+
+        # If auth expired or the cached client got into a bad state, clear and retry once.
+        if status in {401, 403}:
+            try:
+                get_workspace_client.cache_clear()
+            except Exception:
+                pass
+            client = get_workspace_client()
+            http_debug = _invoke_http(client, DATABRICKS_OPENAI_RESPONSES_URL, body)
+            status = http_debug.get("status")
+
         if DEBUG_SHOW_AGENT_PAYLOAD:
             return json.dumps(
                 {
@@ -335,7 +347,22 @@ def call_databricks_agent(messages: list[dict]) -> str:
                 default=str,
             )
 
-        return _extract_openai_responses_text(http_debug.get("json") or {})
+        # Surface HTTP failures instead of showing the generic "could not retrieve" fallback.
+        if isinstance(status, int) and status >= 400:
+            return (
+                f"Sorry — I'm having trouble reaching the assistant right now (HTTP {status}). "
+                "Please try again in a moment."
+            )
+
+        parsed = http_debug.get("json")
+        if not parsed:
+            # e.g. empty body or non-JSON response
+            return (
+                "Sorry — I got an unexpected response from the assistant service. "
+                "Please try again."
+            )
+
+        return _extract_openai_responses_text(parsed)
     except DatabricksError as err:
         if DEBUG_SHOW_AGENT_PAYLOAD:
             return json.dumps(
